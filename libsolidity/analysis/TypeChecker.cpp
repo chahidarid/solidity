@@ -2046,14 +2046,14 @@ bool TypeChecker::visit(MemberAccess const& _memberAccess)
 		}
 		string errorMsg = "Member \"" + memberName + "\" not found or not visible "
 				"after argument-dependent lookup in " + exprType->toString() + ".";
-		if (memberName == "value")
+
+		if (exprType->category() == Type::Category::Function)
 		{
-			errorMsg.pop_back();
-			errorMsg +=	" - did you forget the \"payable\" modifier?";
-		}
-		else if (exprType->category() == Type::Category::Function)
-		{
-			if (auto const& funType = dynamic_pointer_cast<FunctionType const>(exprType))
+			if (memberName == "value")
+			{
+				errorMsg = "Member \"value\" is only available for external payable function types";
+			}
+			else if (auto const& funType = dynamic_pointer_cast<FunctionType const>(exprType))
 			{
 				auto const& t = funType->returnParameterTypes();
 				if (t.size() == 1)
