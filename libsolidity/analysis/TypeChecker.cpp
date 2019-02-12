@@ -2065,6 +2065,7 @@ bool TypeChecker::visit(MemberAccess const& _memberAccess)
 			}
 		}
 		if (exprType->category() == Type::Category::Contract)
+		{
 			for (auto const& addressMember: AddressType::addressPayable().nativeMembers(nullptr))
 				if (addressMember.name == memberName)
 				{
@@ -2073,6 +2074,23 @@ bool TypeChecker::visit(MemberAccess const& _memberAccess)
 					errorMsg += " Use \"address(" + varName + ")." + memberName + "\" to access this address member.";
 					break;
 				}
+		}
+		if (exprType->category() == Type::Category::Address)
+		{
+			// Trigger error when using send or transfer with a non-payable fallback function.
+			auto addressType = dynamic_cast<AddressType const*>(exprType.get());
+			solAssert(!!addressType, "Should be address type.");
+
+			if (
+				(memberName == "send" || memberName == "transfer") &&
+				addressType->stateMutability() != StateMutability::Payable
+			)
+			{
+				errorMsg.pop_back();
+				errorMsg += " - Is the contract missing a payable fallback function?";
+			}
+		}
+
 		m_errorReporter.fatalTypeError(
 			_memberAccess.location(),
 			errorMsg
@@ -2114,26 +2132,6 @@ bool TypeChecker::visit(MemberAccess const& _memberAccess)
 	{
 		if (ContractType const* contractType = dynamic_cast<decltype(contractType)>(typeType->actualType().get()))
 			annotation.isLValue = annotation.referencedDeclaration->isLValue();
-	}
-
-	if (exprType->category() == Type::Category::Contract)
-	{
-		// Warn about using send or transfer with a non-payable fallback function.
-		if (auto callType = dynamic_cast<FunctionType const*>(type(_memberAccess).get()))
-		{
-			auto kind = callType->kind();
-			auto contractType = dynamic_cast<ContractType const*>(exprType.get());
-			solAssert(!!contractType, "Should be contract type.");
-
-			if (
-				(kind == FunctionType::Kind::Send || kind == FunctionType::Kind::Transfer) &&
-				!contractType->isPayable()
-			)
-				m_errorReporter.typeError(
-					_memberAccess.location(),
-					"Value transfer to a contract without a payable fallback function."
-				);
-		}
 	}
 
 	// TODO some members might be pure, but for example `address(0x123).balance` is not pure
