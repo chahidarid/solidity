@@ -625,6 +625,9 @@ which returns the :ref:`ABI function selector <abi_function_selector>`::
       }
     }
 
+.. note::
+    Public (or external) payable functions also have the pseudo-members ``value`` and ``gas`` but those are only to be used in combination with a call to the function, see :ref:`External Function Calls <external-function-calls>` for more information.
+
 Example that shows how to use internal function types::
 
     pragma solidity >=0.4.16 <0.6.0;
